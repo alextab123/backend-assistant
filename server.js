@@ -1,44 +1,40 @@
-require('dotenv').config(); // <-- Très important : charger les variables d'environnement
 const express = require('express');
 const cors = require('cors');
-const bodyParser = require('body-parser');
-const OpenAI = require('openai');
+const { Configuration, OpenAIApi } = require('openai');
+require('dotenv').config();
 
 const app = express();
-const port = process.env.PORT || 3000;
-
-// Middleware
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
-// Configure OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY // 🔥 Utilisation sécurisée de la clé
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
 });
+const openai = new OpenAIApi(configuration);
 
-// Route pour recevoir les questions
-app.post('/api/ask', async (req, res) => {
-  const { question } = req.body;
-
-  if (!question) {
-    return res.status(400).json({ error: 'Pas de question reçue.' });
-  }
-
+// Ajoute cette route POST pour recevoir les questions
+app.post('/', async (req, res) => {
   try {
-    const completion = await openai.chat.completions.create({
+    const question = req.body.question;
+    if (!question) {
+      return res.status(400).json({ error: 'Pas de question fournie.' });
+    }
+
+    const completion = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: question }]
     });
 
-    const answer = completion.choices[0].message.content;
+    const answer = completion.data.choices[0].message.content;
     res.json({ answer });
   } catch (error) {
-    console.error(error.response ? error.response.data : error.message);
-    res.status(500).json({ error: 'Erreur serveur lors de la réponse.' });
+    console.error(error);
+    res.status(500).json({ error: "Erreur lors de la génération de la réponse." });
   }
 });
 
-// Démarrer le serveur
-app.listen(port, () => {
-  console.log(`Serveur lancé sur http://localhost:${port}`);
+// Lance le serveur
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Serveur en ligne sur le port ${PORT}`);
 });
