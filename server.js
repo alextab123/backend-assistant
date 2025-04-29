@@ -1,5 +1,3 @@
-// ======= server.js (corrigé pour recevoir "messages" au lieu de "question") =======
-
 const express = require('express');
 const cors = require('cors');
 const OpenAI = require('openai');
@@ -13,7 +11,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Nouvelle route POST
+// Route POST pour recevoir l'historique complet
 app.post('/', async (req, res) => {
   try {
     const { messages } = req.body;
@@ -26,15 +24,16 @@ app.post('/', async (req, res) => {
       messages
     });
 
-    const answer = completion.choices[0].message.content;
-    res.json({ answer });
+    const answer = completion.choices[0]?.message?.content?.trim();
+    res.json({ answer: answer || "Pas de réponse générée." });
+
   } catch (error) {
-    console.error(error);
+    console.error("Erreur serveur :", error);
     res.status(500).json({ error: "Erreur lors de la génération de la réponse." });
   }
 });
 
-// Lance le serveur
+// Démarrer le serveur
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Serveur en ligne sur le port ${PORT}`);
