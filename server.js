@@ -1,4 +1,4 @@
-// ======= server.js =======
+// ======= server.js (corrigé pour historique de messages) =======
 
 const express = require('express');
 const cors = require('cors');
@@ -16,21 +16,21 @@ const openai = new OpenAI({
 app.post('/', async (req, res) => {
   try {
     const { messages } = req.body;
-
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: 'Le champ "messages" est requis et doit être un tableau.' });
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return res.status(400).json({ error: 'Aucun message valide reçu.' });
     }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages: messages,
+      messages: messages
     });
 
-    const answer = completion.choices[0]?.message?.content;
+    const answer = completion.choices[0].message.content;
     res.json({ answer });
+
   } catch (error) {
-    console.error('Erreur serveur :', error);
-    res.status(500).json({ error: 'Erreur lors de la génération de la réponse.' });
+    console.error("Erreur backend:", error);
+    res.status(500).json({ error: "Erreur lors de la génération de la réponse." });
   }
 });
 
