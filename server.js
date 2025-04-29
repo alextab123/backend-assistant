@@ -1,3 +1,5 @@
+// ======= server.js =======
+
 const express = require('express');
 const cors = require('cors');
 const OpenAI = require('openai');
@@ -11,29 +13,27 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Route POST pour recevoir l'historique complet
 app.post('/', async (req, res) => {
   try {
     const { messages } = req.body;
+
     if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: 'Aucun historique valide fourni.' });
+      return res.status(400).json({ error: 'Le champ "messages" est requis et doit être un tableau.' });
     }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
-      messages
+      messages: messages,
     });
 
-    const answer = completion.choices[0]?.message?.content?.trim();
-    res.json({ answer: answer || "Pas de réponse générée." });
-
+    const answer = completion.choices[0]?.message?.content;
+    res.json({ answer });
   } catch (error) {
-    console.error("Erreur serveur :", error);
-    res.status(500).json({ error: "Erreur lors de la génération de la réponse." });
+    console.error('Erreur serveur :', error);
+    res.status(500).json({ error: 'Erreur lors de la génération de la réponse.' });
   }
 });
 
-// Démarrer le serveur
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Serveur en ligne sur le port ${PORT}`);
