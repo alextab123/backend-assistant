@@ -1,40 +1,63 @@
-// ======= server.js (corrigé pour historique de messages) =======
+const express = require("express");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const dotenv = require("dotenv");
+const fetch = require("node-fetch");
+const fs = require("fs");
 
-const express = require('express');
-const cors = require('cors');
-const OpenAI = require('openai');
-require('dotenv').config();
+dotenv.config();
 
 const app = express();
+const port = process.env.PORT || 3000;
+
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// ✅ Lire les clés depuis keys.json
+let validKeys = {};
+try {
+  validKeys = JSON.parse(fs.readFileSync("keys.json", "utf-8"));
+} catch (error) {
+  console.error("Erreur lecture des clés :", error);
+}
 
-app.post('/', async (req, res) => {
+// 🚀 Route principale protégée par clé
+app.post("/", async (req, res) => {
+  const { messages, key } = req.body;
+
+  // 🔒 Vérifier que la clé existe et est activée
+  if (!key || !validKeys[key]) {
+    return res.status(403).json({ error: "Clé d'accès invalide ou désactivée." });
+  }
+
   try {
-    const { messages } = req.body;
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: 'Aucun message valide reçu.' });
-    }
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: messages
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages
+      }),
     });
 
-    const answer = completion.choices[0].message.content;
-    res.json({ answer });
+    const data = await response.json();
+
+    if (!data || !data.choices || !data.choices[0]) {
+      return res.status(500).json({ error: "Réponse invalide d'OpenAI" });
+    }
+
+    res.json({ answer: data.choices[0].message.content.trim() });
 
   } catch (error) {
-    console.error("Erreur backend:", error);
-    res.status(500).json({ error: "Erreur lors de la génération de la réponse." });
+    console.error("Erreur OpenAI:", error);
+    res.status(500).json({ error: "Erreur serveur interne" });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Serveur en ligne sur le port ${PORT}`);
+// ▶️ Lancer le serveur
+app.listen(port, () => {
+  console.log(`Serveur démarré sur http://localhost:${port}`);
 });
