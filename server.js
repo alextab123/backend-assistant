@@ -21,6 +21,17 @@ try {
   console.error("Erreur lecture des clés :", error);
 }
 
+// 🔍 Route de vérification de clé (appelée au lancement de l'extension)
+app.post("/verify", (req, res) => {
+  const { key } = req.body;
+
+  if (!key || !validKeys[key]) {
+    return res.status(403).json({ valid: false });
+  }
+
+  return res.json({ valid: true });
+});
+
 // 🚀 Route principale protégée par clé
 app.post("/", async (req, res) => {
   const { messages, key } = req.body;
@@ -59,5 +70,5 @@ app.post("/", async (req, res) => {
 
 // ▶️ Lancer le serveur
 app.listen(port, () => {
-  console.log(`Serveur démarré sur http://localhost:${port}`);
+  console.log(`✅ Serveur démarré sur http://localhost:${port}`);
 });
